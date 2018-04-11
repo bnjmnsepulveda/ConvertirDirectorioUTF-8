@@ -4,11 +4,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +21,8 @@ public class Main {
      * @throws java.io.IOException
      */
     public static void main(String[] args) throws IOException {
-        
-        if(args.length != 1){
+
+        if (args.length != 1) {
             System.out.println("Ingrese las opciones necesarias. java -jar ConvertirDirectorioUTF8 ruta_directorio");
             return;
         }
@@ -33,30 +31,36 @@ public class Main {
         List<String> archivos = getArchivosRecursivamente(dir, new ArrayList<String>());
         for (String archivo : archivos) {
             String cmdCodificacion = CommandService.execute("file -bi " + archivo);
-            String codec = cmdCodificacion.split("charset=")[1].trim();
-            System.out.println(archivo + " codec:" + codec);
-            imprimrArchivo(archivo, codec, "UTF-8");
+            if (cmdCodificacion.contains("charset=") && !cmdCodificacion.contains("binary")) {                
+                String codec = cmdCodificacion.split("charset=")[1].trim();
+                System.out.println(archivo + " codec:" + codec);
+                imprimrArchivo(archivo, codec, "UTF-8");
+            }
+
         }
-        System.out.println("archivos encontrados metodo return " + archivos.size());
+        System.out.println("archivos encontrados :" + archivos.size());
 
     }
 
-    public static void imprimrArchivo(String ruta, String codificacionEntrada, String codificacionSalida)
-            throws FileNotFoundException, UnsupportedEncodingException, IOException {
-        BufferedWriter bw;
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(ruta), codificacionEntrada))) {
-            String sCadena;
-            String salida = "";
-            while ((sCadena = in.readLine()) != null) {
-                salida += sCadena + "\n";
+    @SuppressWarnings("UseSpecificCatch")
+    public static void imprimrArchivo(String ruta, String codificacionEntrada, String codificacionSalida) {
+        try {
+            BufferedWriter bw;
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(new FileInputStream(ruta), codificacionEntrada))) {
+                String sCadena;
+                String salida = "";
+                while ((sCadena = in.readLine()) != null) {
+                    salida += sCadena + "\n";
+                }
+                File archivo = new File(ruta);
+                bw = new BufferedWriter(new FileWriter(archivo));
+                bw.write(salida);
             }
-            System.out.println(salida);
-            File archivo = new File(ruta);
-            bw = new BufferedWriter(new FileWriter(archivo));
-            bw.write(salida);
+            bw.close();
+            System.out.println(ruta + " codificado OK.");
+        } catch (Exception e) {
+            System.out.println("Alerta "+ ruta + " no pudo codificarse de " + codificacionEntrada + " a " + codificacionSalida + " " + e.getMessage());
         }
-        bw.close();
-
     }
 
     public static List<String> getArchivosRecursivamente(File carpeta, List<String> archivos) {
